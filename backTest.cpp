@@ -119,13 +119,13 @@ void TestStrategy::RunData(
 
 	if (sideDataList.back().askPrice > lastItr->askPrice && sideDataList.back().bidPrice >= lastItr->bidPrice && instantVolume - meanVolume > volumeThreshold_c)
 	{
-		limitPriceVector.push_back(datalist.back().bidPrice);
+		limitPriceVector.push_back(datalist.back().askPrice);
 		lotsVector.push_back(1);
 		opVector.push_back(BUY);
 	}
 	if (sideDataList.back().bidPrice < lastItr->bidPrice && sideDataList.back().askPrice <= lastItr->askPrice && instantVolume - meanVolume > volumeThreshold_c)
 	{
-		limitPriceVector.push_back(datalist.back().askPrice);
+		limitPriceVector.push_back(datalist.back().bidPrice);
 		lotsVector.push_back(1);
 		opVector.push_back(SELLSHORT);
 	}
@@ -142,7 +142,7 @@ void TestStrategy::RunData(
 	{
 		if (Simulator::GetInstance().GetCurrentTime() - it->openTime >= holdingThreshold_c || ptm->tm_hour == 15)
 		{
-			limitPriceVector.push_back(datalist.back().askPrice);
+			limitPriceVector.push_back(datalist.back().bidPrice);
 			lotsVector.push_back(it->lots);
 			opVector.push_back(SELL);
 		}
@@ -152,16 +152,25 @@ void TestStrategy::RunData(
 	{
 		if (Simulator::GetInstance().GetCurrentTime() - it->openTime >= holdingThreshold_c || ptm->tm_hour == 15)
 		{
-			limitPriceVector.push_back(datalist.back().bidPrice);
+			limitPriceVector.push_back(datalist.back().askPrice);
 			lotsVector.push_back(it->lots);
 			opVector.push_back(BUYTOCOVER);
 		}
 	}
 }
 
+void CleanUpDataGeneratorVector(vector<DataGenerator*>& dataGeneratorVector)
+{
+	for (vector<DataGenerator*>::iterator it = dataGeneratorVector.begin(); it != dataGeneratorVector.end(); ++ it)
+	{
+		delete (*it);
+	}
+}
+
 int main()
 {
 	Strategy* strategyPtr = new TestStrategy();
+	vector<DataGenerator*> refDataGeneratorVector;
 
 	try
 	{
@@ -184,25 +193,24 @@ int main()
 		cout << "Account created." << endl;
 		cout << account << endl << endl;
 
-		// Set up DataGenerator #1
-		cout << "Loading Cu data..." << endl;
-		DataGenerator dataGeneratorCu(interval, filenameCu);
-		cout << "Cu Data loaded." << endl << endl;
-	
-		// Set up DataGenerator #2
+		// Set up Main DataGenerator
 		cout << "Loading Al data..." << endl;
 		DataGenerator dataGeneratorAl(interval, filenameAl);
 		cout << "Al Data loaded." << endl << endl;
+
+		// Set up refDataGenerator #1
+		cout << "Loading Cu data..." << endl;
+		DataGenerator* refDataGenerator1 = new DataGenerator(interval, filenameCu);
+		cout << "Cu Data loaded." << endl << endl;
+		// Push to refDataGeneratorVector
+		refDataGeneratorVector.push_back(refDataGenerator1);
 
 		cout << "--------------------------Testing Simulator----------------------------" << endl;
 		cout << "Setting strategy..." << endl;
 		Simulator::GetInstance().SetStrategy(strategyPtr);
 		cout << "Strategy set." << endl << endl;
-		cout << "Run Strategy..." << endl;
 
-		// Add all the reference data generators to the list
-		vector<DataGenerator*> refDataGeneratorVector;
-		refDataGeneratorVector.push_back(&dataGeneratorCu);
+		cout << "Run Strategy..." << endl;
 
 		// Run
 		Simulator::GetInstance().Run(account, dataGeneratorAl, refDataGeneratorVector);
@@ -212,12 +220,14 @@ int main()
 		cout << account << endl;
 
 		delete strategyPtr;
+		CleanUpDataGeneratorVector(refDataGeneratorVector);
 	}
 	catch (Error& e)
 	{
 		cout << "Error: " << endl;
 		cout << e.GetMsg() << endl;
 		delete strategyPtr;
+		CleanUpDataGeneratorVector(refDataGeneratorVector);
 	}
 
 	return 0;

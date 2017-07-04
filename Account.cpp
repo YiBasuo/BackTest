@@ -3,6 +3,7 @@
 #include "Account.h"
 #include "TradeOrderT.h"
 #include "Constants.h"
+#include "Simulator.h"
 
 using namespace std;
 
@@ -18,6 +19,8 @@ void Account::SendOrder(double limitPrice, int lots, Operation_e op)
 	++ maxOrderID;
 	activeOrders.push_back(order);
 	historyOrders.push_back(order);
+
+	Simulator::GetInstance().GetMainLog() << "---Send Order: " << order << endl;
 }
 
 void Account::CancelOrder(int cancelledOrderID)
@@ -32,6 +35,8 @@ void Account::CancelOrder(int cancelledOrderID)
 	}
 
 	it->status = CANCELLED;
+
+	Simulator::GetInstance().GetMainLog() << "---Cancel Order: " << (*it) << endl;
 
 	historyOrders.push_back(*it);
 	activeOrders.erase(it);
@@ -72,6 +77,8 @@ void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t curr
 		historyOrders.push_back(*it);
 		historyTrade.push_back(*it);
 
+		Simulator::GetInstance().GetMainLog() << "---Order Matched: " << (*it) << endl;
+
 		activeOrders.erase(it);
 		return;
 	}
@@ -87,6 +94,8 @@ void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t curr
 
 		historyOrders.push_back(matchedOrder);
 		historyTrade.push_back(matchedOrder);
+
+		Simulator::GetInstance().GetMainLog() << "---Order Matched: " << matchedOrder << endl;
 		return;
 	}
 

@@ -7,6 +7,7 @@
 #include "TradeOrderT.h"
 #include "Strategy.h"
 #include "DataGenerator.h"
+#include "Timer.h"
 #include "Log.h"
 
 class Simulator
@@ -17,27 +18,42 @@ public:
 
 	void SetStrategy(Strategy* testStrategyPtr);
 
-	void Run(Account& account, DataGenerator& dataGenerator, std::vector<DataGenerator*> refDataGeneratorVector);
+	void Run(Account& account, DataGenerator& dataGenerator, std::vector<DataGenerator*>& refDataGeneratorVector);
 
-	bool Match(Account& account, const std::vector<DataLineT>& dataLines, const std::vector<TradeOrderT>& activeOrders);
+	bool Match(Account& account, const std::vector<TradeOrderT>& activeOrders);
+
+	// Log current market status
+	void LogMarketStatus(int numLines = 1);
 
 	// Accesser:
 	time_t GetCurrentTime() const;
 	int GetCurrentMillisec() const;
 
+	Log& GetMainLog();
+
 private:
+	//**************Private Functions**************//
 	Simulator();
+
+	// Update the market status
 	void UpdateDataLines(DataGenerator& dataGenerator, std::vector<DataLineT>& dataLines, std::vector<DataLineT>& nextDataLines);
 
-	Strategy* strategyPtr;
-	time_t currentTime;
-	int currentMillisec;
-	Log mainLog;
-
 	// Simulator is a singlton
-	~Simulator() {}
+	~Simulator();
 	Simulator(const Simulator& );
 	Simulator& operator=(const Simulator&);
+
+	//**************Private Members**************//
+
+	Strategy* strategyPtr;
+	// Timer is used to simulate the time change of a real trading day
+	Timer timer;
+
+	// Current market status for main instrument & reference instruments
+	std::vector<DataLineT> dataLines;
+	std::vector<std::vector<DataLineT> > refDataLines;
+
+	Log mainLog;
 };
 
 #endif /*SIMULATOR_H_*/

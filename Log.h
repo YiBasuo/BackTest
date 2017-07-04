@@ -3,9 +3,7 @@
 
 #include <fstream>  
 #include <string>  
-#include <sstream>  
-#include <ctime>  
-  
+
 class Log  
 {  
 public:  
@@ -20,7 +18,7 @@ public:
     void Enable();  
     void Disable();  
   
-    std::string GetTimeStr();  
+    std::string GetLogDateTimeStr();  
 
     template <typename T> Log& operator<<(const T& value)  
     {  
@@ -39,13 +37,6 @@ public:
         return (*this);  
     }  
 
-private:  
-    template<typename T> std::string ValueToStr(T value)  
-    {  
-        std::ostringstream ost;  
-        ost << value;  
-        return ost.str();  
-    }  
 private:  
     std::ofstream logFout;  
   

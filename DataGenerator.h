@@ -23,6 +23,8 @@ public:
 
 	interval_t GetInterval() const;
 	std::vector<DataLineT> GetData() const;
+	time_t GetNextDateTime() const;
+	int GetNextUpdateMillisec() const;
 
 	bool ReachEOF() const;
 
@@ -33,7 +35,8 @@ private:
 
 	// Convert a line in data file to DataLineT
 	static void ReadLine(const std::string& line, DataLineT& dataLine);
-	static time_t ConvertStringToTime(const std::string & timeString);
+
+	void GetNextDataLine(DataLineT& dataLine);
 
 	// Disable default constructor, copy constructor and assign operator
 	DataGenerator();
@@ -42,6 +45,8 @@ private:
 	
 	//*********************Private variables*********************//
 	std::vector<DataLineT> data;
+
+	DataLineT* nextDataLinePtr;
 	std::ifstream fin;
 
 	const interval_t interval_c;

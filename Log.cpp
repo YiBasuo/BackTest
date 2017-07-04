@@ -1,3 +1,6 @@
+#include <sstream>
+#include <ctime>
+#include "Utility.h"
 #include "Log.h"
 
 using namespace std;
@@ -34,16 +37,15 @@ void Log::Close()
   
 bool Log::CommonLogInit()  
 {  
-    time_t tNowTime;  
-    time(&tNowTime);  
+    time_t nowTime;
+    time(&nowTime);
   
-    tm* tLocalTime = localtime(&tNowTime);  
-  
-    string sDateStr = ValueToStr(tLocalTime->tm_year+1900) + "-" +  
+    /*string sDateStr = ValueToStr(tLocalTime->tm_year+1900) + "-" +  
         ValueToStr(tLocalTime->tm_mon+1) + "-" +  
-        ValueToStr(tLocalTime->tm_mday);  
+        ValueToStr(tLocalTime->tm_mday);  */
+	string dateTime = GetDateTimeStr(nowTime);
   
-    return Open("Log/Log_" + sDateStr + ".log");  
+    return Open("Log/Log_" + dateTime + ".log");  
 }  
   
 void Log::Enable()  
@@ -56,20 +58,12 @@ void Log::Disable()
     enabled = false;  
 }  
   
-string Log::GetTimeStr()  
+string Log::GetLogDateTimeStr()  
 {  
-    time_t tNowTime;  
-    time(&tNowTime);  
+    time_t nowTime;  
+    time(&nowTime);  
+
+	string logDateTimeStr = "Log Time~: " + GetDateTimeStr(nowTime) + ": ";
   
-    tm* tLocalTime = localtime(&tNowTime);  
-  
-    //"2011-07-18 23:03:01 ";  
-    string strFormat = "%Y-%m-%d %H:%M:%S: ";  
-  
-    char strDateTime[30] = {'\0'};  
-    strftime(strDateTime, 30, strFormat.c_str(), tLocalTime);  
-  
-    string strRes = strDateTime;  
-  
-    return strRes;  
+    return logDateTimeStr;  
 }  

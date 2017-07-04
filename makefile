@@ -25,5 +25,7 @@ $(PRGM):$(OBJS)
 	#-lthostmduserapi -lhiredis
 	#cp ./$(PRGM) $(DESTDIR)
 .PHONY:clean
+logclean:
+	rm -rf Log/*
 clean:
 	rm -rf *.o $(PRGM)

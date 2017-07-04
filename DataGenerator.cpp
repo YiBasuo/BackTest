@@ -7,12 +7,14 @@
 #include <sstream>
 
 #include "DataGenerator.h"
+#include "Simulator.h"
 
 using namespace std;
 
 //*********************************************Public functions*********************************************//
 DataGenerator::DataGenerator(int interval_, const string& filename) : interval_c(interval_)
 {
+	nextDataLinePtr = 0;
 	OpenAndRead(filename);
 }
 
@@ -21,6 +23,11 @@ DataGenerator::~DataGenerator()
 	if (fin.is_open())
 	{
 		fin.close();
+	}
+
+	if (!nextDataLinePtr)
+	{
+		delete nextDataLinePtr;
 	}
 }
 
@@ -34,6 +41,16 @@ vector<DataLineT> DataGenerator::GetData() const
 	return data;
 }
 
+time_t DataGenerator::GetNextDateTime() const
+{
+	return nextDataLinePtr->dateTime;
+}
+
+int DataGenerator::GetNextUpdateMillisec() const
+{
+	return nextDataLinePtr->updateMillisec;
+}
+
 bool DataGenerator::ReachEOF() const
 {
 	if (fin)
@@ -42,6 +59,8 @@ bool DataGenerator::ReachEOF() const
 	}
 	return 1;
 }
+
+
 
 void DataGenerator::UpdateData()
 {
@@ -52,22 +71,22 @@ void DataGenerator::UpdateData()
 		throw Error(msg);
 	}
 
-//	if (!data.empty())
-	if (data.size() == interval_c * 2)
+	string line;
+	if (!nextDataLinePtr)
 	{
-		data.erase(data.begin());
+		nextDataLinePtr = new DataLineT();
+		GetNextDataLine(*nextDataLinePtr);
 	}
 
-	string line;
-	if (getline(fin, line))
+	if (Simulator::GetInstance().GetCurrentTime() == nextDataLinePtr->dateTime && Simulator::GetInstance().GetCurrentMillisec() == nextDataLinePtr->updateMillisec)
 	{
-		DataLineT dataLine;
-		ReadLine(line, dataLine);
-
-		if (!dataLine.instrumentID.empty())	
+		if (data.size() == interval_c * 2)
 		{
-			data.push_back(dataLine);
+			data.erase(data.begin());
 		}
+
+		data.push_back(*nextDataLinePtr);
+		GetNextDataLine(*nextDataLinePtr);
 	}
 }
 
@@ -165,25 +184,7 @@ void DataGenerator::CheckDataIntegrity(const string& filename)
 
 
 //*********************************************Private functions*********************************************//
-time_t DataGenerator::ConvertStringToTime(const string & timeString)
-{
-	if (timeString.size() >= max_time_string_size_c)
-	{
-		string msg = "DataGenerator: ConvertStringToTime\ntimeString -" + timeString + "- is too long";
-		throw Error(msg);
-	}
 
-	tm rawtm;
-	time_t time;
-	char buf[max_time_string_size_c];
-
-	strcpy(buf, timeString.c_str());
-	strptime(buf, "%Y-%m-%d %H:%M:%S", &rawtm);
-	rawtm.tm_isdst = -1;
-	time = mktime(&rawtm);
-
-	return time;
-}
 
 void DataGenerator::OpenAndRead(const string& filename)
 {
@@ -217,10 +218,21 @@ void DataGenerator::OpenAndRead(const string& filename)
 		break;
 	}
 
+	cout << line << endl;
+
 	if (!data.size())
 	{
 		string msg = "DataGenerator: OpenAndRead\nNo data found in file -" + filename;
 		throw Error(msg);
+	}
+}
+
+void DataGenerator::GetNextDataLine(DataLineT& dataLine)
+{
+	string line;
+	if (getline(fin, line))
+	{
+		ReadLine(line, dataLine);
 	}
 }
 

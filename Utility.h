@@ -3,6 +3,7 @@
 
 #include <string>
 #include <fstream>
+#include <sstream>
 
 /**********************************Exception handling***********************************************/
 class Error
@@ -62,5 +63,17 @@ struct DataLineT
 };
 std::ostream& operator<<(std::ostream& os, const DataLineT& dataline);
 double operator-(const DataLineT& left, const DataLineT& right);
+
+/*********************************************Other Utility Functions******************************************/
+std::string GetDateTimeStr(time_t dateTime);
+
+time_t ConvertStringToTime(const std::string & timeString);
+
+template<typename T> std::string ValueToStr(T value)  
+{  
+    std::ostringstream ost;  
+    ost << value;  
+    return ost.str();  
+}  
 
 #endif /*UTILITY_H_*/

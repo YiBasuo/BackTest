@@ -1,15 +1,12 @@
+#include <sstream>
+#include <algorithm>
+
 #include "Constants.h"
 #include "Account.h"
 #include "Simulator.h"
 #include "Log.h"
 
 using namespace std;
-Simulator::Simulator() : strategyPtr(0)
-{
-	// Create log file with default log file name: log_date_createtime.txt
-	mainLog.CommonLogInit();
-}
-
 Simulator& Simulator::GetInstance()
 {
 	static Simulator singleton;
@@ -20,140 +17,92 @@ void Simulator::SetStrategy(Strategy* testStrategyPtr)
 {
 	strategyPtr = testStrategyPtr;
 
-	mainLog << mainLog.GetTimeStr() << "Strategy Set" << endl;
+	mainLog << mainLog.GetLogDateTimeStr() << "Strategy Set." << endl;
 }
 
-void Simulator::UpdateDataLines(DataGenerator& dataGenerator, vector<DataLineT>& dataLines, vector<DataLineT>& nextDataLines)
-{
-	if (nextDataLines.back().dateTime == currentTime && nextDataLines.back().updateMillisec == currentMillisec)
-	{
-		dataLines = nextDataLines;
-		dataGenerator.UpdateData();
-		nextDataLines = dataGenerator.GetData();
-	}
-}
-
-void Simulator::Run(Account& account, DataGenerator& dataGenerator, vector<DataGenerator*> refDataGenerator)
+void Simulator::Run(Account& account, DataGenerator& dataGenerator, vector<DataGenerator*>& refDataGenerators)
 {
 	if (!strategyPtr)
 	{
-		cout << "No strategy loaded" << endl;
-		return;
+		cout << "No strategy loaded." << endl;
+		return ;
 	}
-	// Containers for Function Strategy->Run to return to
+	// Containers for Function Strategy->Run return
 	vector<double> limitPriceVector;
 	vector<int> lotsVector;
 	vector<Operation_e> opVector;
 	vector<int> cancelledOrderIDVector;
 
-	// Active Orders and first dataline
 	vector<TradeOrderT> activeOrders;
 
-	vector<DataLineT> dataLines = dataGenerator.GetData();
-	dataGenerator.UpdateData();
-	vector<DataLineT> nextDataLines = dataGenerator.GetData();
-
-	vector<vector<DataLineT> > refDataLines;
-	vector<vector<DataLineT> > nextRefDataLines;
-	for (vector<DataGenerator*>::iterator it = refDataGenerator.begin(); it != refDataGenerator.end(); ++ it)
+	dataLines = dataGenerator.GetData();
+	for (vector<DataGenerator*>::iterator it = refDataGenerators.begin(); it != refDataGenerators.end(); ++ it)
 	{
 		refDataLines.push_back((*it)->GetData());
-		(*it)->UpdateData();
-		nextRefDataLines.push_back((*it)->GetData());
-	} 
-	// Set currentTime and currentMillisec
-	currentTime = dataLines.back().dateTime;
-	currentMillisec = dataLines.back().updateMillisec;
+	}
 
-	tm *ptm = localtime(&currentTime);
-	bool overnight = 0;
+	LogMarketStatus();
 
-	while (!(ptm->tm_hour == 15 && ptm->tm_sec == 1))
+	while (!timer.EndOfDay())
 	{
-		UpdateDataLines(dataGenerator, dataLines, nextDataLines);
-		for (size_t i = 0; i != refDataGenerator.size(); ++ i)
-		{
-			UpdateDataLines((*refDataGenerator[i]), refDataLines[i], nextRefDataLines[i]);
-		}
-
-		if (difftime(nextDataLines.back().dateTime, currentTime) > market_closed_gap_c)
-		{
-			currentTime = nextDataLines.back().dateTime;
-			currentMillisec = 0;
-			continue;
-		}
-
-		bool modified = 0;
-		// Match orders and update accout since Data has been updated
 		activeOrders = account.GetActiveOrders();
-		modified = Match(account, dataLines, activeOrders);
-
-		if (modified)
-		{
-//			cout << account << endl;
-		}
-
-		// Run strategy on updated data, Clear return containers before runing the strategy
-		activeOrders = account.GetActiveOrders();
+		// Clear return containers
 		limitPriceVector.clear();
 		lotsVector.clear();
 		opVector.clear();
 		cancelledOrderIDVector.clear();
 
-		strategyPtr->RunData(dataLines, refDataLines, activeOrders, account.GetPositionLong(), account.GetPositionShort(), limitPriceVector, lotsVector, opVector, cancelledOrderIDVector);
+		// Run strategy
+		strategyPtr->RunData(
+			dataLines, 
+			refDataLines, 
+			activeOrders, 
+			account.GetPositionLong(), 
+			account.GetPositionShort(), 
+			limitPriceVector,
+			lotsVector,
+			opVector,
+			cancelledOrderIDVector
+		);
 
-		// Send order according to the strategy return
+		// Send orders if any
 		for (size_t i = 0; i < limitPriceVector.size(); ++ i)
 		{
 			account.SendOrder(limitPriceVector[i], lotsVector[i], opVector[i]);
-//			cout << account << endl;
 		}
 
-		// Cancel order according to the strategy return
+		// Cancel orders if any
 		for (vector<int>::iterator it = cancelledOrderIDVector.begin(); it != cancelledOrderIDVector.end(); ++ it)
 		{
 			account.CancelOrder(*it);
-//			cout << account << endl;
 		}
 
-		// Match orders and update account again since active orders has been uppdated 
-		modified = 0;
+		// Match orders. Update activeOrders before Match
 		activeOrders = account.GetActiveOrders();
-		modified = Match(account, dataLines, activeOrders);
-		if (modified)
+		bool modified = Match(account, activeOrders);
+		if (modified && 0)
 		{
-//			cout << account << endl;
+			mainLog << account << endl;
 		}
-		
-		// Update dataLines
+
+		// Increment Time:
+		timer.Increment();
+		// Update data
 		dataGenerator.UpdateData();
 		dataLines = dataGenerator.GetData();
-		for (vector<DataGenerator*>::const_iterator it = refDataGenerator.begin(); it != refDataGenerator.end(); ++ it)
+		size_t index = 0; 
+		for (vector<DataGenerator*>::iterator it = refDataGenerators.begin(); it != refDataGenerators.end(); ++ it, ++ index)
 		{
 			(*it)->UpdateData();
+			refDataLines[index] = (*it)->GetData();
 		}
+		LogMarketStatus();
 
-		// Increment time
-		if (currentMillisec == 0)
-		{
-			currentMillisec = 500;
-		}
-		else if (currentMillisec == 500)
-		{
-			currentMillisec = 0;
-			currentTime += 1;
-		}
-
-		ptm = localtime(&currentTime);
-		if (ptm->tm_hour == 0 && ptm->tm_min == 0 && ptm->tm_sec == 0 && !overnight)
-		{
-			currentTime -= 86401;
-			overnight = 1;
-		}
+		// Run strategy on current data.
 	}
 }
 
-bool Simulator::Match(Account& account, const vector<DataLineT>& dataLines, const vector<TradeOrderT>& activeOrders)
+bool Simulator::Match(Account& account, const vector<TradeOrderT>& activeOrders)
 {
 	bool modified = 0;
 	DataLineT latestLine = dataLines.back();
@@ -162,9 +111,9 @@ bool Simulator::Match(Account& account, const vector<DataLineT>& dataLines, cons
 		if ((it->GetOp() == BUY || it->GetOp() == BUYTOCOVER) && it->GetPrice() >= latestLine.bidPrice)
 		{
 			account.MatchOrder(it->GetID(), 
-				latestLine.bidPrice, 
+				latestLine.askPrice, 
 				it->GetLots() <= latestLine.bidVolume ? it->GetLots() : latestLine.bidVolume,
-				currentTime
+				timer.GetCurrentTime()
 				);
 			modified = 1;
 		}
@@ -172,9 +121,9 @@ bool Simulator::Match(Account& account, const vector<DataLineT>& dataLines, cons
 		if ((it->GetOp() == SELL || it->GetOp() == SELLSHORT) && it->GetPrice() <= latestLine.askPrice)
 		{
 			account.MatchOrder(it->GetID(), 
-				latestLine.askPrice, 
+				latestLine.bidPrice, 
 				it->GetLots() <= latestLine.askVolume? it->GetLots() : latestLine.askVolume,
-				currentTime
+				timer.GetCurrentTime()
 				);
 			modified = 1;
 		}
@@ -183,12 +132,65 @@ bool Simulator::Match(Account& account, const vector<DataLineT>& dataLines, cons
 	return modified;
 }
 
+void Simulator::LogMarketStatus(int numLines)
+{
+	int cnt(numLines);
+	//mainLog << mainLog.GetLogDateTimeStr() << "Market Status" << endl;
+	mainLog << timer << endl;
+	if (dataLines.empty())
+	{
+		mainLog << "\tNo Main Instrument Data" << endl;
+	}
+	else
+	{
+		mainLog << "\tMain Instrument Status: " << endl;
+		for (vector<DataLineT>::reverse_iterator it = dataLines.rbegin(); it != dataLines.rend() && cnt != 0; ++ it, --cnt)
+		{
+			mainLog << "\t\t" << (*it) << endl;
+		}
+	}
+
+	cnt = numLines;
+	for (size_t i = 0; i != refDataLines.size(); ++ i)
+	{
+		if (refDataLines[i].empty())
+		{
+			mainLog << "No Data for ref instrument#" << i + 1 << endl;
+		}
+		else
+		{
+			mainLog << "\tRef Instrument#" << i + 1 << " Status: " << endl;
+			for (vector<DataLineT>::reverse_iterator it = refDataLines[i].rbegin(); it != refDataLines[i].rend() && cnt != 0; ++ it, --cnt)
+			{
+				mainLog << "\t\t" << (*it) << endl;
+			}
+		}
+	}
+}
+
 time_t Simulator::GetCurrentTime() const
 {
-	return currentTime;
+	return timer.GetCurrentTime();
 }
 
 int Simulator::GetCurrentMillisec() const
 {
-	return currentMillisec;
+	return timer.GetCurrentMillisec();
+}
+
+Log& Simulator::GetMainLog()
+{
+	return mainLog;
+}
+
+/*************************************************Private Functions**********************************************************/
+Simulator::Simulator()
+	: strategyPtr(0) 
+{
+	// Create log file with default log file name: log_date_createtime.txt
+	mainLog.CommonLogInit();
+}
+
+Simulator::~Simulator()
+{
 }
