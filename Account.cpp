@@ -13,17 +13,17 @@ Account::Account(double assets_) : maxOrderID(0), assets(assets_) {}
 
 Account::~Account() {}
 
-void Account::SendOrder(double limitPrice, int lots, Operation_e op)
+void Account::SendOrder(double limitPrice, int lots, Operation_e op, time_t orderTime, int millisec)
 {
-	TradeOrderT order(limitPrice, lots, op, maxOrderID, ACTIVE);
+	TradeOrderT order(limitPrice, lots, op, maxOrderID, ACTIVE, orderTime, millisec);
 	++ maxOrderID;
 	activeOrders.push_back(order);
 	historyOrders.push_back(order);
 
-	Simulator::GetInstance().GetMainLog() << "---Send Order: " << order << endl;
+	Simulator::GetInstance().GetMainLog() << "\t---Send Order: " << order << endl;
 }
 
-void Account::CancelOrder(int cancelledOrderID)
+void Account::CancelOrder(int cancelledOrderID, time_t cancelTime, int cancelMillisec)
 {
 	vector<TradeOrderT>::iterator it = find(activeOrders.begin(), activeOrders.end(), cancelledOrderID);
 
@@ -35,14 +35,16 @@ void Account::CancelOrder(int cancelledOrderID)
 	}
 
 	it->status = CANCELLED;
+	it->orderTime = cancelTime;
+	it->millisec = cancelMillisec;
 
-	Simulator::GetInstance().GetMainLog() << "---Cancel Order: " << (*it) << endl;
+	Simulator::GetInstance().GetMainLog() << "\t---Cancel Order: " << (*it) << endl;
 
 	historyOrders.push_back(*it);
 	activeOrders.erase(it);
 }
 
-void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t currentTime)
+void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t matchTime, int matchMillisec)
 {
 	vector<TradeOrderT>::iterator it = find(activeOrders.begin(), activeOrders.end(), matchedOrderID);
 
@@ -56,13 +58,13 @@ void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t curr
 	switch (it->GetOp())
 	{
 		case BUY:
-			OpenPosition(LONG_POSI, price, lots, currentTime);
+			OpenPosition(LONG_POSI, price, lots, matchTime, matchMillisec);
 			break;
 		case SELL:
 			ClosePosition(LONG_POSI, price, lots);
 			break;
 		case SELLSHORT:
-			OpenPosition(SHORT_POSI, price, lots, currentTime);
+			OpenPosition(SHORT_POSI, price, lots, matchTime, matchMillisec);
 			break;
 		case BUYTOCOVER:
 			ClosePosition(SHORT_POSI, price, lots);
@@ -73,11 +75,13 @@ void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t curr
 	{
 		it->status = MATCHED;
 		it->price = price;
+		it->orderTime = matchTime;
+		it->millisec = matchMillisec;
 
 		historyOrders.push_back(*it);
 		historyTrade.push_back(*it);
 
-		Simulator::GetInstance().GetMainLog() << "---Order Matched: " << (*it) << endl;
+		Simulator::GetInstance().GetMainLog() << "\t---Order Matched: " << (*it) << endl;
 
 		activeOrders.erase(it);
 		return;
@@ -91,6 +95,8 @@ void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t curr
 		matchedOrder.status = MATCHED;
 		matchedOrder.lots = lots;
 		matchedOrder.price = price;
+		matchedOrder.orderTime = matchTime;
+		matchedOrder.millisec = matchMillisec;
 
 		historyOrders.push_back(matchedOrder);
 		historyTrade.push_back(matchedOrder);
@@ -118,11 +124,11 @@ vector<TradeOrderT> Account::GetHistoryTrade() const
 {
 	return historyTrade;
 }
-vector<PositionT> Account::GetPositionLong() const
+vector<PositionT> Account::GetPositionsLong() const
 {
 	return posiLong;
 }
-vector<PositionT> Account::GetPositionShort() const
+vector<PositionT> Account::GetPositionsShort() const
 {
 	return posiShort;
 }
@@ -172,15 +178,19 @@ ostream& operator<<(ostream& os, const Account& account)
 	return os;
 }
 
+void UpdateAnalysisInfo()
+{
+}
 
 /******************************************Private Functions**************************************************************/
-void Account::OpenPosition(Direction_e direction, double price, int lots, time_t currentTime)
+void Account::OpenPosition(Direction_e direction, double price, int lots, time_t currentTime, int currentMillisec)
 {
 	PositionT newPosi;
 	newPosi.price = price;
 	newPosi.lots = lots;
 	newPosi.direction = direction;
 	newPosi.openTime = currentTime;
+	newPosi.openMillisec = currentMillisec;
 
 	if (direction == LONG_POSI)
 	{
@@ -223,3 +233,4 @@ void Account::ClosePosition(Direction_e direction, double price, int lots)
 
 	assets += profit * contract_size_c * ((direction == LONG_POSI) ? 1 : -1);
 }
+

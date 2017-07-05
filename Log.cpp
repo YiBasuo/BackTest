@@ -43,9 +43,9 @@ bool Log::CommonLogInit()
     /*string sDateStr = ValueToStr(tLocalTime->tm_year+1900) + "-" +  
         ValueToStr(tLocalTime->tm_mon+1) + "-" +  
         ValueToStr(tLocalTime->tm_mday);  */
-	string dateTime = GetDateTimeStr(nowTime);
+	string defaultLogFile = "Log/Log_" + GetDateTimeStr(nowTime) + ".log";
   
-    return Open("Log/Log_" + dateTime + ".log");  
+    return Open(defaultLogFile);  
 }  
   
 void Log::Enable()  

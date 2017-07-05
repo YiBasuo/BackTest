@@ -16,29 +16,16 @@ string Error::GetMsg()
 ostream& operator<<(ostream& os, const DataLineT& dataline)
 {
 	stringstream iss;
-/*	iss << "dateTime: " << GetDateTimeStr(dataline.dateTime);
-	iss << "\tupdateMillisec: " << dataline.updateMillisec;
-	iss << "\tinstrumentID: " << dataline.instrumentID;
-	iss << "\tlastPrice: " << dataline.lastPrice;
-	iss << "\tpreSettle: " << dataline.preSettle;
-	iss << "\tpreClose: " << dataline.preClose;
-	iss << "\tpreOpenInterest: " << dataline.preOpenInterest;
-	iss << "\topenPrice: " << dataline.openPrice;
-	iss << "\thighestPrice: " << dataline.highestPrice;
-	iss << "\tlowestPrice: " << dataline.lowestPrice;
-	iss << "\tvolume: " << dataline.volume;
-	iss << "\tturnover: " << dataline.turnover;
-	iss << "\topenInterest: " << dataline.openInterest;
-	iss << "\tupperLimitPrice: " << dataline.upperLimitPrice;
-	iss << "\tlowerLimitPrice: " << dataline.lowerLimitPrice;
-	iss << "\tbidPrice: " << dataline.bidPrice;
-	iss << "\tbidVolume: " << dataline.bidVolume;
-	iss << "\taskPrice: " << dataline.askPrice;
-	iss << "\taskVolume: " << dataline.askVolume;
-	iss << "\taveragePrice: " << dataline.averagePrice;
-	*/
+
 	iss << GetDateTimeStr(dataline.dateTime);
-	iss << "\t" << dataline.updateMillisec;
+	if (dataline.updateMillisec == 0)
+	{
+		iss << ".0";
+	}
+	if (dataline.updateMillisec == 500)
+	{
+		iss << ".5";
+	}
 	iss << "\t" << dataline.instrumentID;
 	iss << "\t" << dataline.lastPrice;
 	iss << "\t" << dataline.preSettle;

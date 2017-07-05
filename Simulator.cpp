@@ -13,12 +13,7 @@ Simulator& Simulator::GetInstance()
 	return singleton;
 }
 
-void Simulator::SetStrategy(Strategy* testStrategyPtr)
-{
-	strategyPtr = testStrategyPtr;
 
-	mainLog << mainLog.GetLogDateTimeStr() << "Strategy Set." << endl;
-}
 
 void Simulator::Run(Account& account, DataGenerator& dataGenerator, vector<DataGenerator*>& refDataGenerators)
 {
@@ -57,24 +52,26 @@ void Simulator::Run(Account& account, DataGenerator& dataGenerator, vector<DataG
 			dataLines, 
 			refDataLines, 
 			activeOrders, 
-			account.GetPositionLong(), 
-			account.GetPositionShort(), 
-			limitPriceVector,
-			lotsVector,
-			opVector,
-			cancelledOrderIDVector
+			account.GetPositionsLong(), 
+			account.GetPositionsShort()
 		);
+
+		// Get return data
+		limitPriceVector = strategyPtr->GetLimitPriceVector();
+		lotsVector = strategyPtr->GetLotsVector();
+		opVector = strategyPtr->GetOpVector();
+		cancelledOrderIDVector = strategyPtr->GetCancelledOrderIDVector();
 
 		// Send orders if any
 		for (size_t i = 0; i < limitPriceVector.size(); ++ i)
 		{
-			account.SendOrder(limitPriceVector[i], lotsVector[i], opVector[i]);
+			account.SendOrder(limitPriceVector[i], lotsVector[i], opVector[i], timer.GetCurrentTime(), timer.GetCurrentMillisec());
 		}
 
 		// Cancel orders if any
 		for (vector<int>::iterator it = cancelledOrderIDVector.begin(); it != cancelledOrderIDVector.end(); ++ it)
 		{
-			account.CancelOrder(*it);
+			account.CancelOrder(*it, timer.GetCurrentTime(), timer.GetCurrentMillisec());
 		}
 
 		// Match orders. Update activeOrders before Match
@@ -85,15 +82,18 @@ void Simulator::Run(Account& account, DataGenerator& dataGenerator, vector<DataG
 			mainLog << account << endl;
 		}
 
+		// Reset strategy containers
+		strategyPtr->Reset();
+
 		// Increment Time:
 		timer.Increment();
 		// Update data
-		dataGenerator.UpdateData();
+		dataGenerator.UpdateData(timer.GetCurrentTime(), timer.GetCurrentMillisec());
 		dataLines = dataGenerator.GetData();
 		size_t index = 0; 
 		for (vector<DataGenerator*>::iterator it = refDataGenerators.begin(); it != refDataGenerators.end(); ++ it, ++ index)
 		{
-			(*it)->UpdateData();
+			(*it)->UpdateData(timer.GetCurrentTime(), timer.GetCurrentMillisec());
 			refDataLines[index] = (*it)->GetData();
 		}
 		LogMarketStatus();
@@ -113,7 +113,8 @@ bool Simulator::Match(Account& account, const vector<TradeOrderT>& activeOrders)
 			account.MatchOrder(it->GetID(), 
 				latestLine.askPrice, 
 				it->GetLots() <= latestLine.bidVolume ? it->GetLots() : latestLine.bidVolume,
-				timer.GetCurrentTime()
+				timer.GetCurrentTime(),
+				timer.GetCurrentMillisec()
 				);
 			modified = 1;
 		}
@@ -123,13 +124,26 @@ bool Simulator::Match(Account& account, const vector<TradeOrderT>& activeOrders)
 			account.MatchOrder(it->GetID(), 
 				latestLine.bidPrice, 
 				it->GetLots() <= latestLine.askVolume? it->GetLots() : latestLine.askVolume,
-				timer.GetCurrentTime()
+				timer.GetCurrentTime(),
+				timer.GetCurrentMillisec()
 				);
 			modified = 1;
 		}
 	}
 
 	return modified;
+}
+
+
+void Simulator::GenerateReport(const vector<TradeOrderT>& matchedOrders)
+{
+	if (!reportPtr)
+	{
+		mainLog << "No reportPtr set." << endl;
+		return;
+	}
+
+	reportPtr->GenerateReport(matchedOrders);
 }
 
 void Simulator::LogMarketStatus(int numLines)
@@ -168,6 +182,20 @@ void Simulator::LogMarketStatus(int numLines)
 	}
 }
 
+void Simulator::SetReport(Report* userReportPtr)
+{
+	reportPtr = userReportPtr;
+
+	mainLog << mainLog.GetLogDateTimeStr() << "Report Set." << endl;
+}
+
+void Simulator::SetStrategy(Strategy* testStrategyPtr)
+{
+	strategyPtr = testStrategyPtr;
+
+	mainLog << mainLog.GetLogDateTimeStr() << "Strategy Set." << endl;
+}
+
 time_t Simulator::GetCurrentTime() const
 {
 	return timer.GetCurrentTime();
@@ -185,7 +213,8 @@ Log& Simulator::GetMainLog()
 
 /*************************************************Private Functions**********************************************************/
 Simulator::Simulator()
-	: strategyPtr(0) 
+	: strategyPtr(0),
+	reportPtr(0)
 {
 	// Create log file with default log file name: log_date_createtime.txt
 	mainLog.CommonLogInit();

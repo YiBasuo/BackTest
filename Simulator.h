@@ -6,6 +6,7 @@
 #include "Utility.h"
 #include "TradeOrderT.h"
 #include "Strategy.h"
+#include "Report.h"
 #include "DataGenerator.h"
 #include "Timer.h"
 #include "Log.h"
@@ -16,20 +17,22 @@ public:
 	// Note: Mayers singleton is NOT thread safe
 	static Simulator& GetInstance();
 
-	void SetStrategy(Strategy* testStrategyPtr);
-
 	void Run(Account& account, DataGenerator& dataGenerator, std::vector<DataGenerator*>& refDataGeneratorVector);
 
 	bool Match(Account& account, const std::vector<TradeOrderT>& activeOrders);
 
-	// Log current market status
-	void LogMarketStatus(int numLines = 1);
+	void GenerateReport(const std::vector<TradeOrderT>& matchedOrders);
 
 	// Accesser:
+	void SetReport(Report* reportPtr);
+	void SetStrategy(Strategy* testStrategyPtr);
+
 	time_t GetCurrentTime() const;
 	int GetCurrentMillisec() const;
 
 	Log& GetMainLog();
+	// Log current market status
+	void LogMarketStatus(int numLines = 1);
 
 private:
 	//**************Private Functions**************//
@@ -46,6 +49,7 @@ private:
 	//**************Private Members**************//
 
 	Strategy* strategyPtr;
+	Report* reportPtr;
 	// Timer is used to simulate the time change of a real trading day
 	Timer timer;
 

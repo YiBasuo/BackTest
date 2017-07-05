@@ -12,9 +12,10 @@
 using namespace std;
 
 //*********************************************Public functions*********************************************//
-DataGenerator::DataGenerator(int interval_, const string& filename) : interval_c(interval_)
+DataGenerator::DataGenerator(int interval_, const string& filename_) : interval_c(interval_)
 {
 	nextDataLinePtr = 0;
+	filename = filename_;
 	OpenAndRead(filename);
 }
 
@@ -51,6 +52,11 @@ int DataGenerator::GetNextUpdateMillisec() const
 	return nextDataLinePtr->updateMillisec;
 }
 
+string DataGenerator::GetFilename() const
+{
+	return filename;
+}
+
 bool DataGenerator::ReachEOF() const
 {
 	if (fin)
@@ -62,7 +68,7 @@ bool DataGenerator::ReachEOF() const
 
 
 
-void DataGenerator::UpdateData()
+void DataGenerator::UpdateData(time_t currentTime, int currentMillisec)
 {
 	if (!fin.is_open())
 	{
@@ -78,7 +84,7 @@ void DataGenerator::UpdateData()
 		GetNextDataLine(*nextDataLinePtr);
 	}
 
-	if (Simulator::GetInstance().GetCurrentTime() == nextDataLinePtr->dateTime && Simulator::GetInstance().GetCurrentMillisec() == nextDataLinePtr->updateMillisec)
+	if (currentTime == nextDataLinePtr->dateTime && currentMillisec == nextDataLinePtr->updateMillisec)
 	{
 		if (data.size() == interval_c * 2)
 		{
@@ -188,6 +194,11 @@ void DataGenerator::CheckDataIntegrity(const string& filename)
 
 void DataGenerator::OpenAndRead(const string& filename)
 {
+	if (filename.empty())
+	{
+		throw Error("No filename set for DataGenerator");
+	}
+
 	fin.open(filename.c_str());
 
 	if (!fin.is_open())
@@ -217,8 +228,6 @@ void DataGenerator::OpenAndRead(const string& filename)
 		data.push_back(dataLine);
 		break;
 	}
-
-	cout << line << endl;
 
 	if (!data.size())
 	{

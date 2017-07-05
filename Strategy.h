@@ -9,7 +9,6 @@ class Strategy
 {
 public:
 	Strategy();
-	~Strategy();
 
 	int GetDefaultLots();
 
@@ -18,15 +17,30 @@ public:
 		std::vector<std::vector<DataLineT> > refDatalistVector,
 		std::vector<TradeOrderT> activeOrders, 
 		std::vector<PositionT> longPosi,
-		std::vector<PositionT> shortPosi,
-		std::vector<double>& limitPriceVector, 
-		std::vector<int>& lotsVector, 
-		std::vector<Operation_e>& opVector, 
-		std::vector<int>& cancelledOrderIDVector) = 0;
-	
+		std::vector<PositionT> shortPosi
+		) = 0;
+
+	// Accessors
+	std::vector<double> GetLimitPriceVector() const;
+	std::vector<int> GetLotsVector() const;
+	std::vector<Operation_e> GetOpVector() const;
+	std::vector<int> GetCancelledOrderIDVector() const;
+
+	// After simulator processed all orders, call this to reset the containers
+	void Reset();
 protected:
-	int defaultLots;
+	void SendOrder(double limitPrice, int lots, Operation_e op);
+
+	void CacelOrder(int cancelledOrderID, int lots);
+
 private:
+	int quota;
+
+	std::vector<double> limitPriceVector;
+	std::vector<int> lotsVector;
+	std::vector<Operation_e> opVector;
+
+	std::vector<int> cancelledOrderIDVector;
 };
 
 #endif /*STRATEGY_H_*/

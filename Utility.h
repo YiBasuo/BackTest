@@ -26,6 +26,7 @@ struct PositionT
 	int lots;
 	Direction_e direction;
 	time_t openTime;
+	int openMillisec;
 };
 // outstream positionT
 std::ostream& operator<<(std::ostream& os, const PositionT& posi);
@@ -63,6 +64,8 @@ struct DataLineT
 };
 std::ostream& operator<<(std::ostream& os, const DataLineT& dataline);
 double operator-(const DataLineT& left, const DataLineT& right);
+double operator-(const DataLineT& left, time_t rightTime);
+double operator-(time_t leftTime, const DataLineT& right);
 
 /*********************************************Other Utility Functions******************************************/
 std::string GetDateTimeStr(time_t dateTime);

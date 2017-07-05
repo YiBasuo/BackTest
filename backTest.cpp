@@ -26,11 +26,8 @@ public:
 		vector<vector<DataLineT> > refDatalistVector,
 		vector<TradeOrderT> activeOrders, 
 		vector<PositionT> posiLong,
-		vector<PositionT> posiShort,
-		vector<double>& limitPriceVector, 
-		vector<int>& lotsVector, 
-		vector<Operation_e>& opVector, 
-		vector<int>& cancelledOrderIDVector);
+		vector<PositionT> posiShort
+		);
 
 private:
 };
@@ -55,9 +52,9 @@ double CalculateMeanVolume(const vector<DataLineT>& datalist, interval_t checkIn
 			break;
 		}
 	}
+	Simulator::GetInstance().GetMainLog() << GetDateTimeStr((*it).dateTime) << " " << (*it).volume << endl;
 
 	struct tm* startPtm = localtime(&(it->dateTime));
-	//double beginVolume = (startPtm->tm_hour == 20 && startPtm->tm_min == 59) ? 0 : it->volume;
 	double beginVolume = it->volume;
 
 	double interval(checkInterval);
@@ -90,11 +87,7 @@ void TestStrategy::RunData(
 	vector<vector<DataLineT> > refDatalistVector,
 	vector<TradeOrderT> activeOrders, 
 	vector<PositionT> posiLong,
-	vector<PositionT> posiShort,
-	vector<double>& limitPriceVector, 
-	vector<int>& lotsVector, 
-	vector<Operation_e>& opVector, 
-	vector<int>& cancelledOrderIDVector)
+	vector<PositionT> posiShort)
 {
 	const interval_t checkInterval = 10;
 
@@ -103,31 +96,22 @@ void TestStrategy::RunData(
 
 	double meanVolume = CalculateMeanVolume(sideDataList, checkInterval);
 	double instantVolume = CalculateInstantVolume(sideDataList);
-	/*static int cnt(0);
-	if (cnt < 20)
-	{
-		cout << "#" << cnt + 1 << " mean ";
-		cout << meanVolume << " | " << " instant " << instantVolume << endl;
-	}
-	++ cnt;*/
 
 	// Open position
-	vector<DataLineT>::const_reverse_iterator lastItr = datalist.rbegin();
+	vector<DataLineT>::const_reverse_iterator lastItr = sideDataList.rbegin();
 	++ lastItr;
 
 	const double volumeThreshold_c = 1;
 
 	if (sideDataList.back().askPrice > lastItr->askPrice && sideDataList.back().bidPrice >= lastItr->bidPrice && instantVolume - meanVolume > volumeThreshold_c)
 	{
-		limitPriceVector.push_back(datalist.back().askPrice);
-		lotsVector.push_back(1);
-		opVector.push_back(BUY);
+		Simulator::GetInstance().GetMainLog() << "~~~~" << "MeanVolume-" << meanVolume << "\tinstantVolume" << instantVolume << endl;
+		SendOrder(datalist.back().askPrice, 1, BUY);
 	}
 	if (sideDataList.back().bidPrice < lastItr->bidPrice && sideDataList.back().askPrice <= lastItr->askPrice && instantVolume - meanVolume > volumeThreshold_c)
 	{
-		limitPriceVector.push_back(datalist.back().bidPrice);
-		lotsVector.push_back(1);
-		opVector.push_back(SELLSHORT);
+		Simulator::GetInstance().GetMainLog() << "~~~~" << "MeanVolume-" << meanVolume << "\tinstantVolume" << instantVolume << endl;
+		SendOrder(datalist.back().bidPrice, 1, SELLSHORT);
 	}
 
 	for (vector<TradeOrderT>::iterator it = activeOrders.begin(); it != activeOrders.end(); ++ it)
@@ -142,9 +126,7 @@ void TestStrategy::RunData(
 	{
 		if (Simulator::GetInstance().GetCurrentTime() - it->openTime >= holdingThreshold_c || ptm->tm_hour == 15)
 		{
-			limitPriceVector.push_back(datalist.back().bidPrice);
-			lotsVector.push_back(it->lots);
-			opVector.push_back(SELL);
+			SendOrder(datalist.back().bidPrice, it->lots, SELL);
 		}
 	}
 
@@ -152,9 +134,7 @@ void TestStrategy::RunData(
 	{
 		if (Simulator::GetInstance().GetCurrentTime() - it->openTime >= holdingThreshold_c || ptm->tm_hour == 15)
 		{
-			limitPriceVector.push_back(datalist.back().askPrice);
-			lotsVector.push_back(it->lots);
-			opVector.push_back(BUYTOCOVER);
+			SendOrder(datalist.back().askPrice, it->lots, BUYTOCOVER);
 		}
 	}
 }
@@ -172,6 +152,7 @@ int main()
 	Strategy* strategyPtr = new TestStrategy();
 	vector<DataGenerator*> refDataGeneratorVector;
 
+	Report* reportPtr(0);
 	try
 	{
 		//************************Test Simulator****************************//
@@ -182,10 +163,10 @@ int main()
 		// Integrity check
 		cout << "Checking Cu data Integrity..." << endl << endl;
 		DataGenerator::CheckDataIntegrity(filenameCu);
-		cout << endl << "Integrity check complete." << endl;
+		cout << endl << "Cu Integrity check complete." << endl;
 		cout << "Checking Al data Integrity..." << endl << endl;
 		DataGenerator::CheckDataIntegrity(filenameAl);
-		cout << endl << "Integrity check complete." << endl;
+		cout << endl << "Al Integrity check complete." << endl;
 
 		// Create Account model
 		cout << "Create an account..." << endl;
@@ -219,14 +200,35 @@ int main()
 		cout << endl << "Showing account summary..." << endl;
 		cout << account << endl;
 
-		delete strategyPtr;
+		cout << "Generating Report..." << endl;
+		reportPtr = new Report(filenameAl);	
+		Simulator::GetInstance().SetReport(reportPtr);
+
+		Simulator::GetInstance().GenerateReport(account.GetHistoryTrade());
+		cout << "Report Generated." << endl;
+
+		if (strategyPtr)
+		{
+			delete strategyPtr;
+		}
+		if (reportPtr)
+		{
+			delete reportPtr;
+		}
 		CleanUpDataGeneratorVector(refDataGeneratorVector);
 	}
 	catch (Error& e)
 	{
 		cout << "Error: " << endl;
 		cout << e.GetMsg() << endl;
-		delete strategyPtr;
+		if (strategyPtr)
+		{
+			delete strategyPtr;
+		}
+		if (reportPtr)
+		{
+			delete reportPtr;
+		}
 		CleanUpDataGeneratorVector(refDataGeneratorVector);
 	}
 
