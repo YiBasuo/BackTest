@@ -9,6 +9,9 @@ public:
 	// Increment time
 	void Increment();
 
+	// Reset timer
+	void Reset();
+
 	// Accessors
 	time_t GetCurrentTime() const;
 	int GetCurrentMillisec() const;

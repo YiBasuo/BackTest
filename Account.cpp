@@ -13,14 +13,13 @@ Account::Account(double assets_) : maxOrderID(0), assets(assets_) {}
 
 Account::~Account() {}
 
-void Account::SendOrder(double limitPrice, int lots, Operation_e op, time_t orderTime, int millisec)
+TradeOrderT Account::SendOrder(double limitPrice, int lots, Operation_e op, time_t orderTime, int millisec)
 {
 	TradeOrderT order(limitPrice, lots, op, maxOrderID, ACTIVE, orderTime, millisec);
 	++ maxOrderID;
 	activeOrders.push_back(order);
 	historyOrders.push_back(order);
-
-	Simulator::GetInstance().GetMainLog() << "\t---Send Order: " << order << endl;
+	return order;
 }
 
 void Account::CancelOrder(int cancelledOrderID, time_t cancelTime, int cancelMillisec)
@@ -38,13 +37,11 @@ void Account::CancelOrder(int cancelledOrderID, time_t cancelTime, int cancelMil
 	it->orderTime = cancelTime;
 	it->millisec = cancelMillisec;
 
-	Simulator::GetInstance().GetMainLog() << "\t---Cancel Order: " << (*it) << endl;
-
 	historyOrders.push_back(*it);
 	activeOrders.erase(it);
 }
 
-void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t matchTime, int matchMillisec)
+TradeOrderT Account::MatchOrder(int matchedOrderID, double price, int lots, time_t matchTime, int matchMillisec)
 {
 	vector<TradeOrderT>::iterator it = find(activeOrders.begin(), activeOrders.end(), matchedOrderID);
 
@@ -81,10 +78,10 @@ void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t matc
 		historyOrders.push_back(*it);
 		historyTrade.push_back(*it);
 
-		Simulator::GetInstance().GetMainLog() << "\t---Order Matched: " << (*it) << endl;
+		TradeOrderT matchedOrder(*it);
 
 		activeOrders.erase(it);
-		return;
+		return matchedOrder;
 	}
 
 	if (it->lots > lots)
@@ -101,8 +98,7 @@ void Account::MatchOrder(int matchedOrderID, double price, int lots, time_t matc
 		historyOrders.push_back(matchedOrder);
 		historyTrade.push_back(matchedOrder);
 
-		Simulator::GetInstance().GetMainLog() << "---Order Matched: " << matchedOrder << endl;
-		return;
+		return matchedOrder;
 	}
 
 	stringstream iss;

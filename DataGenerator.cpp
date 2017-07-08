@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstring>
 
+#include <vector>
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -116,6 +117,8 @@ void DataGenerator::CheckDataIntegrity(const string& filename)
 	double maxGapSec(0);
 	string maxGapLineA, maxGapLineB;
 	int maxGapLineNumA(0), maxGapLineNumB(0);
+
+	vector<int> duplicatedLinesVector;
 	for (int lineCnt = 0; getline(finCheck, line); ++ lineCnt)
 	{
 		// Find Title and move on
@@ -139,8 +142,9 @@ void DataGenerator::CheckDataIntegrity(const string& filename)
 		// Compare new line with the previous line to check time consistancy
 		double timeDiff = difftime(dataline.dateTime, lastData.dateTime);
 
-		if (timeDiff < 0.01 && lastData.updateMillisec + dataline.updateMillisec != 500)
+		if (fabs(timeDiff) < 0.01 && lastData.updateMillisec + dataline.updateMillisec != 500)
 		{
+			duplicatedLinesVector.push_back(lineCnt);
 			++ duplicatedCnt;
 		}
 		else if (fabs(timeDiff - 1) < 0.01 && lastData.updateMillisec + dataline.updateMillisec != 500 && !(lastData.volume - dataline.volume < 0.01))
@@ -176,6 +180,10 @@ void DataGenerator::CheckDataIntegrity(const string& filename)
 
 	cout << "# Integrity Check Summary: " << filename << endl;
 	cout << "# 		Number of Duplicated lines: " << duplicatedCnt << endl;
+	for (vector<int>::iterator it = duplicatedLinesVector.begin(); it != duplicatedLinesVector.end(); ++ it)
+	{
+		cout << "#			line#" << (*it) << " with line#" << (*it) + 1 << endl;
+	}
 	cout << "#		Number of InConsist lines: " << inconsistCnt << endl;
 	cout << "#		Number of Gaps: " << gapCnt << endl;
 	cout << "# Total Missing Seconds: " << missingSec << endl;

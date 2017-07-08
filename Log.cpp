@@ -1,6 +1,7 @@
 #include <sstream>
 #include <ctime>
 #include "Utility.h"
+#include "Constants.h"
 #include "Log.h"
 
 using namespace std;
@@ -40,10 +41,8 @@ bool Log::CommonLogInit()
     time_t nowTime;
     time(&nowTime);
   
-    /*string sDateStr = ValueToStr(tLocalTime->tm_year+1900) + "-" +  
-        ValueToStr(tLocalTime->tm_mon+1) + "-" +  
-        ValueToStr(tLocalTime->tm_mday);  */
-	string defaultLogFile = "Log/Log_" + GetDateTimeStr(nowTime) + ".log";
+	string defaultLogFile = log_folder_path_c + "/Log_"
+		+ DataFileName::GetInstance().GetTestInstrument() + "_" + DataFileName::GetInstance().GetTestDate() + ".log";
   
     return Open(defaultLogFile);  
 }  

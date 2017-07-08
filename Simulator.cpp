@@ -7,13 +7,13 @@
 #include "Log.h"
 
 using namespace std;
-Simulator& Simulator::GetInstance()
+
+Simulator::Simulator()
+	: strategyPtr(0),
+	reportPtr(0)
 {
-	static Simulator singleton;
-	return singleton;
+	mainLog.CommonLogInit();
 }
-
-
 
 void Simulator::Run(Account& account, DataGenerator& dataGenerator, vector<DataGenerator*>& refDataGenerators)
 {
@@ -65,13 +65,17 @@ void Simulator::Run(Account& account, DataGenerator& dataGenerator, vector<DataG
 		// Send orders if any
 		for (size_t i = 0; i < limitPriceVector.size(); ++ i)
 		{
-			account.SendOrder(limitPriceVector[i], lotsVector[i], opVector[i], timer.GetCurrentTime(), timer.GetCurrentMillisec());
+			TradeOrderT newOrder = account.SendOrder(limitPriceVector[i], lotsVector[i], opVector[i], timer.GetCurrentTime(), timer.GetCurrentMillisec());
+
+			mainLog << "\t---Send Order: " << newOrder << endl;
 		}
 
 		// Cancel orders if any
 		for (vector<int>::iterator it = cancelledOrderIDVector.begin(); it != cancelledOrderIDVector.end(); ++ it)
 		{
 			account.CancelOrder(*it, timer.GetCurrentTime(), timer.GetCurrentMillisec());
+
+			mainLog << "\t---Cancel Order: " << (*it) << endl;
 		}
 
 		// Match orders. Update activeOrders before Match
@@ -110,23 +114,25 @@ bool Simulator::Match(Account& account, const vector<TradeOrderT>& activeOrders)
 	{
 		if ((it->GetOp() == BUY || it->GetOp() == BUYTOCOVER) && it->GetPrice() >= latestLine.bidPrice)
 		{
-			account.MatchOrder(it->GetID(), 
+			TradeOrderT matchedOrder = account.MatchOrder(it->GetID(), 
 				latestLine.askPrice, 
 				it->GetLots() <= latestLine.bidVolume ? it->GetLots() : latestLine.bidVolume,
 				timer.GetCurrentTime(),
 				timer.GetCurrentMillisec()
 				);
+			mainLog << "---Order Matched: " << matchedOrder << endl;
 			modified = 1;
 		}
 
 		if ((it->GetOp() == SELL || it->GetOp() == SELLSHORT) && it->GetPrice() <= latestLine.askPrice)
 		{
-			account.MatchOrder(it->GetID(), 
+			TradeOrderT matchedOrder = account.MatchOrder(it->GetID(), 
 				latestLine.bidPrice, 
 				it->GetLots() <= latestLine.askVolume? it->GetLots() : latestLine.askVolume,
 				timer.GetCurrentTime(),
 				timer.GetCurrentMillisec()
 				);
+			mainLog << "---Order Matched: " << matchedOrder << endl;
 			modified = 1;
 		}
 	}
@@ -146,10 +152,20 @@ void Simulator::GenerateReport(const vector<TradeOrderT>& matchedOrders)
 	reportPtr->GenerateReport(matchedOrders);
 }
 
+void Simulator::GenerateReport(const Account& account)
+{
+	if (!reportPtr)
+	{
+		mainLog << "No reportPtr set." << endl;
+		return;
+	}
+
+	reportPtr->GenerateReport(account);
+}
+
 void Simulator::LogMarketStatus(int numLines)
 {
 	int cnt(numLines);
-	//mainLog << mainLog.GetLogDateTimeStr() << "Market Status" << endl;
 	mainLog << timer << endl;
 	if (dataLines.empty())
 	{
@@ -212,14 +228,3 @@ Log& Simulator::GetMainLog()
 }
 
 /*************************************************Private Functions**********************************************************/
-Simulator::Simulator()
-	: strategyPtr(0),
-	reportPtr(0)
-{
-	// Create log file with default log file name: log_date_createtime.txt
-	mainLog.CommonLogInit();
-}
-
-Simulator::~Simulator()
-{
-}

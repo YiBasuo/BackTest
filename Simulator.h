@@ -14,14 +14,14 @@
 class Simulator
 {
 public:
-	// Note: Mayers singleton is NOT thread safe
-	static Simulator& GetInstance();
+	Simulator();
 
 	void Run(Account& account, DataGenerator& dataGenerator, std::vector<DataGenerator*>& refDataGeneratorVector);
 
 	bool Match(Account& account, const std::vector<TradeOrderT>& activeOrders);
 
 	void GenerateReport(const std::vector<TradeOrderT>& matchedOrders);
+	void GenerateReport(const Account& account);
 
 	// Accesser:
 	void SetReport(Report* reportPtr);
@@ -36,15 +36,9 @@ public:
 
 private:
 	//**************Private Functions**************//
-	Simulator();
 
 	// Update the market status
 	void UpdateDataLines(DataGenerator& dataGenerator, std::vector<DataLineT>& dataLines, std::vector<DataLineT>& nextDataLines);
-
-	// Simulator is a singlton
-	~Simulator();
-	Simulator(const Simulator& );
-	Simulator& operator=(const Simulator&);
 
 	//**************Private Members**************//
 

@@ -39,6 +39,14 @@ void Timer::Increment()
 	}
 }
 
+void Timer::Reset()
+{
+	currentTime = GetTimeFromStrConst(night_start_time_c);
+	currentMillisec = 0;
+	overnight = 0;
+	endOfDay = 0;
+}
+
 time_t Timer::GetCurrentTime() const
 {
 	return currentTime;
@@ -64,7 +72,8 @@ ostream& operator<<(ostream& os, const Timer& timer)
 /***************************************Private functions**************************************/
 time_t Timer::GetTimeFromStrConst(const string& strConst)
 {
-	string dateTimeStr = test_date_c + " " + strConst;
+	string dateTimeStr(DataFileName::GetInstance().GetTestDate());
+	dateTimeStr = dateTimeStr.substr(0, 4) + "-" + dateTimeStr.substr(4, 2) + "-" + dateTimeStr.substr(6, 2) + " " + strConst;
 	time_t dateTime = ConvertStringToTime(dateTimeStr);
 	return dateTime;
 }

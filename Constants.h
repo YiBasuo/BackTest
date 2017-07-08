@@ -5,7 +5,28 @@
 #include <string>
 
 /********************************Timer Constants*************************************/
-static const std::string test_date_c = "2017-06-29";
+class DataFileName
+{
+public:
+	static DataFileName& GetInstance();
+
+	void SetDataFileName(const std::string& datafile);
+	std::string GetFilename() const;
+	std::string GetTestInstrument() const;
+	std::string GetTestDate() const;
+private:
+	DataFileName() {};
+	DataFileName(const DataFileName&);
+	DataFileName& operator=(const DataFileName&);
+
+private:
+	std::string filename;
+	std::string test_instrument;
+	std::string test_date;
+};
+
+//static const std::string test_instrument_c = "cu1708";
+//static const std::string test_date_c = "20170629";
 
 static const std::string night_start_time_c = "20:59:00";
 static const std::string night_end_time_c = "01:00:01";
@@ -44,12 +65,18 @@ static const int maximum_position_limit_c = 1;
 
 /************************************************************************************/
 
+// Used in Reading Data
+static std::string default_data_file_summary_c = "DataFileSummary.txt";
+
+static std::string data_folder_path_c = "Data/";
+/************************************************************************************/
+
 // Used in Log
 static std::string log_folder_path_c = "Log/";
 
 /************************************************************************************/
 
 // Used in Report
-static std::string report_file_name_c = "Report/report.txt";
+static std::string report_folder_path_c = "Report/";
 
 #endif /*CONSTANTS*/

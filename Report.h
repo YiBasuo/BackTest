@@ -8,6 +8,7 @@
 #include "DataGenerator.h"
 #include "Utility.h"
 #include "TradeOrderT.h"
+#include "Account.h"
 
 class Report
 {
@@ -16,6 +17,7 @@ public:
 	~Report();
 
 	virtual void GenerateReport(const std::vector<TradeOrderT>& matchedOrders);
+	virtual void GenerateReport(const Account& account);
 
 	virtual void Render();
 protected:

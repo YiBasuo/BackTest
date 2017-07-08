@@ -27,5 +27,7 @@ $(PRGM):$(OBJS)
 .PHONY:clean
 logclean:
 	rm -rf Log/*
+reportclean:
+	rm -rf Report/*
 clean:
 	rm -rf *.o $(PRGM)

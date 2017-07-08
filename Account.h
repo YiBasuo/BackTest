@@ -13,9 +13,9 @@ public:
 	Account(double asset_);
 	~Account();
 
-	void SendOrder(double limitPrice, int lots, Operation_e op, time_t orderTime, int millisec);
+	TradeOrderT SendOrder(double limitPrice, int lots, Operation_e op, time_t orderTime, int millisec);
 	void CancelOrder(int cancelledOrderID, time_t cancelTime, int cancelMillisec);
-	void MatchOrder(int matchedOrderID, double price, int lots, time_t matchTime, int matchMillisec);
+	TradeOrderT MatchOrder(int matchedOrderID, double price, int lots, time_t matchTime, int matchMillisec);
 
 	std::vector<TradeOrderT> GetActiveOrders() const;
 	std::vector<TradeOrderT> GetHistoryOrders() const;

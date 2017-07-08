@@ -6,7 +6,7 @@ using namespace std;
 Report::Report(const std::string& dataFilename)
 	: dataGenerator(1, dataFilename)
 {
-	string outputPath = report_file_name_c;
+	string outputPath = report_folder_path_c + "report_" + DataFileName::GetInstance().GetTestInstrument() + "_" + DataFileName::GetInstance().GetTestDate();
 
 	fout.open(outputPath.c_str());
 
@@ -59,16 +59,32 @@ void Report::GenerateReport(const vector<TradeOrderT>& matchedOrders)
 	Render();
 }
 
+void Report::GenerateReport(const Account& account)
+{
+	GenerateReport(account.GetHistoryTrade());
+
+	fout << "Account Summary: " << endl;
+	fout << account << endl;
+}
+
 void Report::Render()
 {
 	double accumulatedProfit = 0;
+	int profitableCnt = 0;
 	for (vector<ReportLineT>::iterator it = reportData.begin(); it != reportData.end(); ++ it)
 	{
 		Render(*it);
 		accumulatedProfit += ComputeProfit(*it);
 		fout << "Accumulated Profit: " << accumulatedProfit << endl;
 		fout << "----------------------------------------------------------------------------" << endl;
+		profitableCnt += ComputeMaxFloatProfit(*it) > 0 ? 1 : 0;
 	}
+
+	fout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl;
+	fout << "Total Number of TranX: " << reportData.size() << endl;
+	fout << "Total Profitable TransX: " << profitableCnt << endl;
+	fout << "Profitable Ratio: " << profitableCnt * 1.0 / reportData.size() << endl;
+	fout << "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" << endl << endl;
 }
 
 /**************************Protected Functions**********************************/
