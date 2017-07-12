@@ -65,7 +65,7 @@ void RunOnFile(const string& datafile)
 	DataFileName::GetInstance().SetDataFileName(datafile);
 
 	string filename = data_folder_path_c + DataFileName::GetInstance().GetFilename();
-	interval_t interval(60);
+	interval_t interval(5);
 
 	Strategy* strategyPtr = new UserStrategy();
 	Report* reportPtr = new Report(filename);

@@ -61,7 +61,7 @@ static const interval_t market_closed_gap_c = 300;
 // to calculate assets change
 static const int contract_size_c = 5;
 // to limit the number of positions holding at the same time
-static const int maximum_position_limit_c = 1;
+static const int maximum_position_limit_c = 100000000;
 
 /************************************************************************************/
 

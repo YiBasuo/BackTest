@@ -85,15 +85,22 @@ void DataGenerator::UpdateData(time_t currentTime, int currentMillisec)
 		GetNextDataLine(*nextDataLinePtr);
 	}
 
+	if (data.size() == interval_c * 2)
+	{
+		data.erase(data.begin());
+	}
+
 	if (currentTime == nextDataLinePtr->dateTime && currentMillisec == nextDataLinePtr->updateMillisec)
 	{
-		if (data.size() == interval_c * 2)
-		{
-			data.erase(data.begin());
-		}
-
 		data.push_back(*nextDataLinePtr);
 		GetNextDataLine(*nextDataLinePtr);
+	}
+	else
+	{
+		DataLineT line(data.back());
+		line.dateTime = currentTime;
+		line.updateMillisec = currentMillisec;
+		data.push_back(line);
 	}
 }
 
